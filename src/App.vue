@@ -1,5 +1,30 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
+    <div
+      v-show="showLoader"
+      class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center"
+    >
+      <svg
+        class="animate-spin -ml-1 mr-3 h-12 w-12 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
     <div class="container">
       <section>
         <div class="flex">
@@ -11,6 +36,7 @@
               <input
                 v-model="ticker"
                 @keydown.enter="add"
+                @keydown="showErrorMessage = false"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -20,29 +46,20 @@
             </div>
             <div
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
+              v-if="hintsList.length"
             >
               <span
+                v-for="hint in hintsList"
+                :key="hint"
+                @click="submitTicker(hint)"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
               >
-                BTC
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                DOGE
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                BCH
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                CHD
+                {{hint}}
               </span>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-show="showErrorMessage" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -75,7 +92,7 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': sel == t,
+              'border-4': sel == t
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
@@ -156,52 +173,92 @@
 
 <script>
 export default {
-  name: "App",
+  name: 'App',
   data() {
     return {
       ticker: null,
       tickers: [],
       sel: null,
       graph: [],
-    };
+      showLoader: false,
+      showErrorMessage: false,
+      aviableTickers: []
+    }
+  },
+  computed: {
+    hintsList() {
+      console.log(this.ticker)
+      if (!this.ticker) return []
+      const filteredTickers = this.aviableTickers.filter((t) =>
+        t.FullName.toLowerCase().includes(this.ticker)
+      )
+      return filteredTickers.slice(0, 4).map((t) => t.Symbol)
+    }
   },
   methods: {
     add() {
+      if (!this.ticker.length) return
+
+      const isTickerIncluded = this.tickers.find(
+        (item) => item.name.toLowerCase() == this.ticker.toLowerCase()
+      )
+      if (isTickerIncluded) {
+        this.showErrorMessage = true
+        return
+      }
+
       const currentTicker = {
         name: this.ticker,
-        price: "-",
-      };
+        price: '-'
+      }
 
-      this.tickers.push(currentTicker);
+      this.tickers.push(currentTicker)
+
       setInterval(async () => {
         const f = await fetch(
           `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD`
-        );
-        const data = await f.json();
-        currentTicker.price = data.USD;
+        )
+        const data = await f.json()
+        currentTicker.price = data.USD
         this.tickers.find((t) => t.name == currentTicker.name).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
 
         if (this.sel?.name == currentTicker.name) {
-          this.graph.push(data.USD);
+          this.graph.push(data.USD)
         }
-      }, 5000);
-      this.ticker = "";
+      }, 5000)
+      this.ticker = ''
+    },
+    submitTicker(ticker) {
+      this.ticker = ticker
+      this.add()
     },
     select(ticker) {
-      this.sel = ticker;
-      this.graph = [];
+      this.sel = ticker
+      this.graph = []
     },
     handleDelete(tickerToRemove) {
-      this.tickers = this.tickers.filter((t) => t != tickerToRemove);
+      this.tickers = this.tickers.filter((t) => t != tickerToRemove)
     },
     normalizeGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
+      const maxValue = Math.max(...this.graph)
+      const minValue = Math.min(...this.graph)
       return this.graph.map(
         (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue)
-      );
+      )
     },
+    async getAviableTickers() {
+      this.showLoader = true
+      const f = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`
+      )
+      const data = await f.json()
+      this.showLoader = false
+      this.aviableTickers = Object.values(data.Data)
+    }
   },
-};
+  created() {
+    this.getAviableTickers()
+  }
+}
 </script>
