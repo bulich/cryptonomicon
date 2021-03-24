@@ -75,7 +75,7 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': sel == t
+              'border-4': sel == t,
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
@@ -156,54 +156,52 @@
 
 <script>
 export default {
-  name: 'App',
+  name: "App",
   data() {
     return {
       ticker: null,
       tickers: [],
       sel: null,
-      graph: []
-    }
+      graph: [],
+    };
   },
   methods: {
     add() {
       const currentTicker = {
         name: this.ticker,
-        price: '-'
-      }
+        price: "-",
+      };
 
-      this.tickers.push(currentTicker)
+      this.tickers.push(currentTicker);
       setInterval(async () => {
         const f = await fetch(
           `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD`
-        )
-        const data = await f.json()
-        currentTicker.price = data.USD
+        );
+        const data = await f.json();
+        currentTicker.price = data.USD;
         this.tickers.find((t) => t.name == currentTicker.name).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
         if (this.sel?.name == currentTicker.name) {
-          this.graph.push(data.USD)
+          this.graph.push(data.USD);
         }
-      }, 5000)
-      this.ticker = ''
+      }, 5000);
+      this.ticker = "";
     },
     select(ticker) {
-      this.sel = ticker
-      this.graph = []
+      this.sel = ticker;
+      this.graph = [];
     },
     handleDelete(tickerToRemove) {
-      this.tickers = this.tickers.filter((t) => t != tickerToRemove)
+      this.tickers = this.tickers.filter((t) => t != tickerToRemove);
     },
     normalizeGraph() {
-      const maxValue = Math.max(...this.graph)
-      const minValue = Math.min(...this.graph)
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
       return this.graph.map(
-        price => 5 + ((price - minValue) * 95) / (maxValue - minValue)
-      )
-    }
-  }
-}
+        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue)
+      );
+    },
+  },
+};
 </script>
-
-<style src="./app.css"></style>
