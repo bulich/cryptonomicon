@@ -54,7 +54,7 @@
                 @click="submitTicker(hint)"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
               >
-                {{hint}}
+                {{ hint }}
               </span>
             </div>
             <div v-show="showErrorMessage" class="text-sm text-red-600">
@@ -213,21 +213,23 @@ export default {
       }
 
       this.tickers.push(currentTicker)
-
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+      this.subscribeToUpdate(currentTicker.name)
+      this.ticker = ''
+    },
+    subscribeToUpdate(tickerName) {
       setInterval(async () => {
         const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD`
+          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD`
         )
         const data = await f.json()
-        currentTicker.price = data.USD
-        this.tickers.find((t) => t.name == currentTicker.name).price =
+        this.tickers.find((t) => t.name == tickerName).price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
 
-        if (this.sel?.name == currentTicker.name) {
+        if (this.sel?.name == tickerName) {
           this.graph.push(data.USD)
         }
       }, 5000)
-      this.ticker = ''
     },
     submitTicker(ticker) {
       this.ticker = ticker
@@ -259,6 +261,14 @@ export default {
   },
   created() {
     this.getAviableTickers()
+
+    const tickersData = localStorage.getItem('cryptonomicon-list')
+    if (tickersData) {
+      this.tickers = JSON.parse(tickersData)
+      this.tickers.forEach(element => {
+        this.subscribeToUpdate(element.name)
+      });
+    }
   }
 }
 </script>
